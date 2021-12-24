@@ -18,16 +18,14 @@ public class ConstraintControllerSystem : SystemBase
 		float dt = Time.DeltaTime;
 
 		Entities.ForEach((Entity entity,
-			ref Translation position,
 			ref Rotation rotation,
 			ref ConstraintComponent segment,
 			ref PhysicsMass physicsMass,
-			ref PhysicsVelocity vel,
-			ref LocalToWorld world) =>
+			ref PhysicsVelocity vel) =>
 		{
-			if (segment.Mass == 0)
-				segment.Mass = math.pow(physicsMass.InverseMass, -1);
-
+			var position = GetComponent<Translation>(entity);
+			segment.Target = GetComponent<Translation>(segment.Origin).Value + segment.Direction;
+			
 			segment.DampingCoefficient = 2.0f * segment.Mass * segment.DampingRatio * segment.AngularFrequency;
 			segment.SpringConstant = segment.Mass * segment.AngularFrequency * segment.AngularFrequency;
 			MathUtils.VelConstraintBias(segment.DampingCoefficient, segment.SpringConstant, dt, out float pbc, out float m_sbc);

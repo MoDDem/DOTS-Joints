@@ -11,7 +11,7 @@ using Unity.Mathematics;
 using Unity.Rendering;
 using Unity.Physics.Authoring;
 
-public class RopeSpawner : MonoBehaviour, IConvertGameObjectToEntity
+public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntity
 {
     /*
     //private EndSimulationEntityCommandBufferSystem endSimulationSystem;
@@ -80,11 +80,10 @@ public class RopeSpawner : MonoBehaviour, IConvertGameObjectToEntity
 
     public GameObject startPoint;
     public int len = 1;
+    public float speed;
     
     //----Constraint settings
     public float3 incrementDirection;
-    public int orderID;
-    public float3 target;
     [Range(0.0001f, 10.0f)]
     public float frequencyHz = 5.0f;
     [Range(0.0001f, 10.0f)]
@@ -93,19 +92,22 @@ public class RopeSpawner : MonoBehaviour, IConvertGameObjectToEntity
     
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
-        var startEntity = dstManager.Instantiate(startPoint);
-        
+        var startEntity = dstManager.CreateEntity();
+        dstManager.AddComponentData(startEntity, new Translation {Value = startPoint.transform.position});
+        dstManager.AddComponentData(startEntity, new MoveRopeComponent() {Speed = speed});
+        Destroy(startPoint);
+
         var segmentType = dstManager.CreateArchetype(
             typeof(LocalToWorld),
             typeof(Translation),
             typeof(Rotation),
             typeof(ConstraintComponent),
+            //typeof(PhysicsCollider),
             typeof(PhysicsMass),
             typeof(PhysicsVelocity),
             typeof(RenderMesh),
             typeof(RenderBounds)
         );
-
         var segmentEntities = new NativeArray<Entity>(len, Allocator.Temp);
         dstManager.CreateEntity(segmentType, segmentEntities);
         
@@ -113,9 +115,30 @@ public class RopeSpawner : MonoBehaviour, IConvertGameObjectToEntity
         {
             var segment = segmentEntities[i];
             dstManager.SetName(segment,"Rope Segment " + i);
+
+            var position = dstManager.GetComponentData<Translation>(startEntity).Value + (incrementDirection * (i + 1));
+            
             dstManager.SetComponentData(segmentEntities[i], new Translation
             {
-                Value = dstManager.GetComponentData<Translation>(startEntity).Value + (incrementDirection * (i + 1))
+                Value = position
+            });
+            dstManager.SetComponentData(segmentEntities[i], new PhysicsMass
+            {
+                InverseMass = 0.1f,
+                InverseInertia = new float3(10,10,10)
+            });
+            dstManager.SetComponentData(segmentEntities[i], new Rotation
+            {
+                Value = quaternion.identity
+            });
+            dstManager.SetComponentData(segmentEntities[i], new PhysicsVelocity
+            {
+                Angular = float3.zero,
+                Linear = float3.zero
+            });
+            dstManager.SetComponentData(segmentEntities[i], new LocalToWorld()
+            {
+                Value = new float4x4(float3x3.zero, position)
             });
             
             float angularFrequency = frequencyHz * (2.0f * math.PI);
@@ -126,12 +149,14 @@ public class RopeSpawner : MonoBehaviour, IConvertGameObjectToEntity
                 AngularFrequency = angularFrequency,
                 DampingCoefficient = 0,
                 SpringConstant = 0,
-                Origin = (i-1 >= 0) ? segmentEntities[i-1] : startEntity,
                 Direction = incrementDirection,
                 OrderId = i,
+                Origin = (i-1 >= 0) ? segmentEntities[i-1] : startEntity,
                 Mass = math.pow(dstManager.GetComponentData<PhysicsMass>(segmentEntities[i]).InverseMass, -1),
-                Target = dstManager.GetComponentData<Translation>(startEntity).Value + (incrementDirection * (i + 1))
+                Target = position
             });
         }
+        
+        dstManager.DestroyEntity(entity);
     }
 }
