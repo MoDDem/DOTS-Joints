@@ -26,37 +26,28 @@ public class MoveRopeSystem : SystemBase
                 ref MoveRopeComponent moveRope,
                 ref Translation translation) =>
             {
-                Debug.Log(pos);
-                translation.Value += pos * dt * moveRope.Speed;;
+                translation.Value += pos * dt * moveRope.Speed;
             }).Schedule();
         }
         
         if(Input.GetAxis("Jump") > 0)
         {
-            bool isAdded = false;
-            
-            Entities.ForEach((Entity entity,
-                ref ConstraintComponent constraint) =>
+            Entities.WithAll<ConstraintComponent>().ForEach((Entity entity) =>
             {
-                Debug.Log(constraint.OrderId);
                 /*
-                if (constraint.OrderId == 1 && !isAdded)
+                var constraint = GetComponent<ConstraintComponent>(entity);
+                
+                if (constraint.OrderId == 0)
                 {
-                    isAdded = true;
-                    Debug.Log("new");
-                    var nw = EntityManager.Instantiate(entity);
-                    constraint.OrderId++;
+                    var newEntity = EntityManager.Instantiate(entity);
+                    SetComponent(newEntity, new ConstraintComponent { OrderId = 0 });
+                    SetComponent(entity, new ConstraintComponent { OrderId = constraint.OrderId + 1 });
                     GetBuffer<PairConnectorComponent>(entity).Clear();
-                    GetBuffer<PairConnectorComponent>(entity).Add(nw);
-
-                    constraint.IsUpdated = true;
+                    GetBuffer<PairConnectorComponent>(entity).Add(newEntity);
                 }
-                else if(!constraint.IsUpdated)
-                {
-                    constraint.OrderId++;
-                    constraint.IsUpdated = true;
-                    constraint.Target += constraint.Direction;
-                }*/
+
+                if (constraint.OrderId > 0)
+                    SetComponent(entity, new ConstraintComponent { OrderId = constraint.OrderId + 1 });*/
             }).Run();
         }
     }

@@ -12,6 +12,7 @@ using Unity.Physics.Authoring;
 
 public class RopeSpawner : MonoBehaviour, IConvertedEntityTarget
 {
+    //private EndSimulationEntityCommandBufferSystem endSimulationSystem;
     private EntityManager manager;
     
     public GameObject segment;
@@ -27,45 +28,50 @@ public class RopeSpawner : MonoBehaviour, IConvertedEntityTarget
 
     void Awake()
     {
+        //endSimulationSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
         manager = World.DefaultGameObjectInjectionWorld.EntityManager;
+        
         startFrom.AddComponent(typeof(OnGameObjectConverted));
 	}
 
-    private IEnumerator SpawnRope()
+    private IEnumerator SpawnRope(int id, Entity origin)
     {
-        if (i == segmentsCount - 1)
+        if (id == segmentsCount - 1)
             segment.GetComponent<PhysicsBodyAuthoring>().Mass = 100000f;
 
         segment.transform.position = nextPos;
         segment.GetComponent<ConstraintComponentView>().target = nextPos;
-        segment.GetComponent<ConstraintComponentView>().orderID = i;
+        segment.GetComponent<ConstraintComponentView>().orderID = id;
         segment.GetComponent<ConstraintComponentView>().incrementDirection = incrementDirection;
         nextPos += incrementDirection;
-
-        yield return new WaitForFixedUpdate();
         
-        Instantiate(segment).name = "Cube " + i;
-        i = i + 1;
+        yield return new WaitForFixedUpdate();
+        Instantiate(segment).name = "Cube " + id;
     }
 
 	public void Converted(Entity entity, GameObject gObject)
-	{
+    {
+        //var ecb = endSimulationSystem.CreateCommandBuffer().AsParallelWriter();
+        
         if (gObject == startFrom)
         {
             prevOrigin = entity;
             nextPos = manager.GetComponentData<Translation>(entity).Value + incrementDirection;
             
             segment.GetComponent<PhysicsBodyAuthoring>().Mass = 10f;
-            StartCoroutine(SpawnRope());
-        }
             
-        manager.AddBuffer<PairConnectorComponent>(entity).Add(prevOrigin);
+            StartCoroutine(SpawnRope(0, Entity.Null));
+            return;
+        }
         
-        prevOrigin = entity;
-
+        //manager.AddBuffer<PairConnectorComponent>(entity).Add(prevOrigin);
+        //ecb.AddBuffer<PairConnectorComponent>(i, entity).Add(prevOrigin);
+        
         if (i >= segmentsCount)
             return;
-
-		StartCoroutine(SpawnRope());
+        i++;
+		StartCoroutine(SpawnRope(i, prevOrigin));
+        
+        prevOrigin = entity;
 	}
 }

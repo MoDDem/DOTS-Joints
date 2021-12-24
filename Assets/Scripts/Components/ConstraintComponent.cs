@@ -10,7 +10,6 @@ using Unity.Mathematics;
 [Serializable]
 public struct ConstraintComponent : IComponentData
 {
-    public bool IsUpdated;
     public int OrderId;
     public float3 Direction;
     public float Mass;

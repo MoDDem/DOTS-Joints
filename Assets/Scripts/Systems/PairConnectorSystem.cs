@@ -21,8 +21,8 @@ public class PairConnectorSystem : SystemBase
 		Entities.ForEach((Entity entity,
 			ref ConstraintComponent segment) =>
 		{
-			Entity origin = GetBuffer<PairConnectorComponent>(entity)[0].Value;
-			segment.Target = GetComponent<Translation>(origin).Value + segment.Direction;
+			//Entity origin = GetBuffer<PairConnectorComponent>(entity)[0].Value;
+			segment.Target = GetComponent<Translation>(segment.Origin).Value + segment.Direction;
 		}).Run();
 	}
 }
