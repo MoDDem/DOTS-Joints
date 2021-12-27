@@ -11,44 +11,80 @@ using Unity.Physics.Authoring;
 using Unity.Transforms;
 using UnityEngine;
 using Unity.Burst;
+using Unity.Rendering;
 
 [BurstCompile]
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
-public class MoveRopeSystem : SystemBase
+public class MoveRopeSystem : JobComponentSystem
 {
-    protected override void OnUpdate()
+    private EndSimulationEntityCommandBufferSystem commandBuffer;
+    protected override void OnCreate()
+    {
+        commandBuffer = World.DefaultGameObjectInjectionWorld.GetExistingSystem<EndSimulationEntityCommandBufferSystem>();
+        base.OnCreate();
+    }
+
+    protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         var dt = Time.DeltaTime;
+        DynamicBuffer<PairSegmentsComponent> array = EntityManager.GetBuffer<PairSegmentsComponent>(GetSingletonEntity<StartTag>());
+        var ecb = commandBuffer.CreateCommandBuffer().AsParallelWriter();
+        
         float3 pos = new float3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
         if ((pos != float3.zero).x || (pos != float3.zero).z)
         {
-            Entities.WithAll<MoveRopeComponent>().ForEach((Entity entity,
-                ref MoveRopeComponent moveRope,
+            Entities.WithAll<StartTag>().ForEach((Entity entity,
                 ref Translation translation) =>
             {
-                translation.Value += pos * dt * moveRope.Speed;
-            }).Schedule();
+                translation.Value += pos * dt * 5;
+            }).Schedule(inputDeps);
         }
         
         if(Input.GetAxis("Jump") > 0)
         {
-            Entities.WithAll<ConstraintComponent>().ForEach((Entity entity) =>
+            Entities.WithAll<ConstraintComponent>().ForEach((Entity e, int entityInQueryIndex) =>
             {
-                /*
-                var constraint = GetComponent<ConstraintComponent>(entity);
-                
+                Entity entity = array[entityInQueryIndex];
+                var constraint = EntityManager.GetComponentData<ConstraintComponent>(entity);
+
                 if (constraint.OrderId == 0)
                 {
-                    var newEntity = EntityManager.Instantiate(entity);
-                    SetComponent(newEntity, new ConstraintComponent { OrderId = 0 });
-                    SetComponent(entity, new ConstraintComponent { OrderId = constraint.OrderId + 1 });
-                    GetBuffer<PairConnectorComponent>(entity).Clear();
-                    GetBuffer<PairConnectorComponent>(entity).Add(newEntity);
-                }
+                    var newEntity = ecb.Instantiate(array.Length, entity);
+                    
+                    EntityManager.SetComponentData(newEntity, new ConstraintComponent
+                    {
+                        OrderId = 0, 
+                        Origin = constraint.Origin
+                    });
+                    
+                    EntityManager.SetComponentData(entity, new ConstraintComponent
+                    {
+                        OrderId = constraint.OrderId + 1, 
+                        Origin = newEntity
+                    });
 
+                    array.Add(newEntity);
+                    array[entityInQueryIndex] = entity;
+                }
+                
                 if (constraint.OrderId > 0)
-                    SetComponent(entity, new ConstraintComponent { OrderId = constraint.OrderId + 1 });*/
-            }).Run();
+                    EntityManager.SetComponentData(entity, new ConstraintComponent { OrderId = constraint.OrderId + 1 });
+            }).Schedule(inputDeps);
+            
+            commandBuffer.AddJobHandleForProducer(inputDeps);
+            
+            return OnUpdate().Schedule(this, inputDeps);
+        }
+    }
+    
+    [RequireComponentTag(typeof(ConstraintComponent))]
+    private struct ChangeRopeLength : IJobChunk
+    {
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        {
+            throw new NotImplementedException();
         }
     }
 }
+
+//TODO: https://www.youtube.com/watch?v=nuxTq0AQAyY
