@@ -62,6 +62,12 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             dstManager.AddComponentData(segment, new Rotation{Value = quaternion.identity});
             dstManager.AddComponentData(segment, new LocalToWorld());
             
+            dstManager.SetSharedComponentData(segment, new RenderMesh
+            {
+                mesh = mesh,
+                material = material
+            });
+            
             dstManager.SetComponentData(segment, new PhysicsCollider
             {
                 Value = Unity.Physics.BoxCollider.Create(new BoxGeometry
@@ -71,11 +77,6 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
                     Orientation = quaternion.identity,
                     Size = new float3(1, 1, 1)
                 }, CollisionFilter.Default, Unity.Physics.Material.Default)
-            });
-            dstManager.SetSharedComponentData(segment, new RenderMesh
-            {
-                mesh = mesh,
-                material = material
             });
             
             var localCollider = dstManager.GetComponentData<PhysicsCollider>(segment);
