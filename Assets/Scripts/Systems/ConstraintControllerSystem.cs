@@ -23,6 +23,9 @@ public class ConstraintControllerSystem : SystemBase
 			ref PhysicsMass physicsMass,
 			ref PhysicsVelocity vel) =>
 		{
+			if(segment.Origin == Entity.Null)
+				return;
+			
 			var position = GetComponent<Translation>(entity);
 			segment.Target = GetComponent<Translation>(segment.Origin).Value + segment.Direction;
 			

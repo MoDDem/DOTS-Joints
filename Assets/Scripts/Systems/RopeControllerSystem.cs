@@ -15,13 +15,13 @@ using Unity.Rendering;
 
 [BurstCompile]
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
-public class MoveRopeSystem : JobComponentSystem
+public class RopeControllerSystem : JobComponentSystem
 {
     [NativeDisableParallelForRestriction]
-    private EndSimulationEntityCommandBufferSystem commandBuffer;
+    private EndFixedStepSimulationEntityCommandBufferSystem commandBuffer;
     protected override void OnCreate()
     {
-        commandBuffer = World.DefaultGameObjectInjectionWorld.GetExistingSystem<EndSimulationEntityCommandBufferSystem>();
+        commandBuffer = World.DefaultGameObjectInjectionWorld.GetExistingSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
         base.OnCreate();
     }
 
@@ -29,15 +29,7 @@ public class MoveRopeSystem : JobComponentSystem
     {
         var ecb = commandBuffer.CreateCommandBuffer().AsParallelWriter();
         var dt = Time.DeltaTime;
-        var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
-
-
-        var bufferEntity = GetSingletonEntity<StartTag>();
-        var getBuffer = GetBufferFromEntity<PairSegmentsComponent>();
-        // var array = EntityManager
-        //     .GetBuffer<PairSegmentsComponent>(GetSingletonEntity<StartTag>())
-        //     .ToNativeArray(Allocator.TempJob);
-
+        
         var moveJob = inputDeps;
         float3 pos = new float3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
         if ((pos != float3.zero).x || (pos != float3.zero).z)
@@ -52,7 +44,16 @@ public class MoveRopeSystem : JobComponentSystem
         var lenJob = moveJob;
         if(Input.GetAxis("Jump") > 0)
         {
-            lenJob = Entities.WithAll<ConstraintComponent>().WithReadOnly(getConstraintComponent).ForEach((Entity e, int entityInQueryIndex) =>
+            Debug.Log(Time.ElapsedTime + " et");
+            
+            var bufferEntity = GetSingletonEntity<StartTag>();
+            var getBuffer = GetBufferFromEntity<PairSegmentsComponent>(true);
+            var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
+
+            lenJob = Entities.WithAll<ConstraintComponent>()
+                .WithReadOnly(getConstraintComponent)
+                .WithReadOnly(getBuffer)
+                .ForEach((int entityInQueryIndex) =>
             {
                 var array = getBuffer[bufferEntity];
                 
@@ -61,32 +62,25 @@ public class MoveRopeSystem : JobComponentSystem
                 
                 if (constraint.OrderId == 0)
                 {
-                    var newEntity = ecb.Instantiate(array.Length, entity);
-                    
-                    ecb.AddComponent(array.Length - 1, newEntity, new ConstraintComponent
-                    {
-                        OrderId = 0, 
-                        Origin = constraint.Origin
-                    });
-                    
-                    ecb.AddComponent(entityInQueryIndex, entity, new ConstraintComponent
-                    {
-                        OrderId = constraint.OrderId + 1, 
-                        Origin = newEntity
-                    });
+                    var newEntity = ecb.Instantiate(entityInQueryIndex, entity);
 
-                    array.Add(newEntity);
-                    array[entityInQueryIndex] = entity;
+                    constraint.OrderId++;
+                    constraint.Origin = newEntity;
+                    ecb.SetComponent(entityInQueryIndex, entity, constraint);
+                    
+                    ecb.AppendToBuffer<PairSegmentsComponent>(array.Length, bufferEntity, newEntity);
                 }
-                
+
                 if (constraint.OrderId > 0)
-                    ecb.AddComponent(entityInQueryIndex, entity, new ConstraintComponent { OrderId = constraint.OrderId + 1 });
+                {
+                    constraint.OrderId++;
+                    ecb.SetComponent(entityInQueryIndex, entity, constraint);   
+                }
             }).Schedule(moveJob);
+            commandBuffer.AddJobHandleForProducer(lenJob);
         }
         
-        commandBuffer.AddJobHandleForProducer(lenJob);
         return lenJob;
-        return default;
         //return inputDeps;
     }
 }
