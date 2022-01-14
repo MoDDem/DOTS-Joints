@@ -35,7 +35,7 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
         
         dstManager.SetName(entity, "Start rope point");
         dstManager.AddComponent(entity, typeof(StartTag));
-        dstManager.AddComponentData(entity, new Translation {Value = startPoint.transform.position});
+        dstManager.AddComponentData(entity, new Translation { Value = startPoint.transform.position });
 
         var segmentType = dstManager.CreateArchetype(
             typeof(LocalToWorld),

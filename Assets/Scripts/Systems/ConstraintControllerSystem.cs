@@ -27,7 +27,7 @@ public class ConstraintControllerSystem : SystemBase
 				return;
 			
 			var position = GetComponent<Translation>(entity);
-			segment.Target = GetComponent<Translation>(segment.Origin).Value + segment.Direction;
+			segment.Target = GetComponent<Translation>(segment.Origin).Value + new float3(0, -0.82f, 0); //TODO: program calc offset from entity origin
 			
 			segment.DampingCoefficient = 2.0f * segment.Mass * segment.DampingRatio * segment.AngularFrequency;
 			segment.SpringConstant = segment.Mass * segment.AngularFrequency * segment.AngularFrequency;

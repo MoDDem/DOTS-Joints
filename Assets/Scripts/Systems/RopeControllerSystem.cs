@@ -42,10 +42,8 @@ public class RopeControllerSystem : JobComponentSystem
         }
 
         var lenJob = moveJob;
-        if(Input.GetAxis("Jump") > 0)
+        if(Input.GetKeyDown("space"))
         {
-            Debug.Log(Time.ElapsedTime + " et");
-            
             var bufferEntity = GetSingletonEntity<StartTag>();
             var getBuffer = GetBufferFromEntity<PairSegmentsComponent>(true);
             var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
@@ -66,6 +64,7 @@ public class RopeControllerSystem : JobComponentSystem
 
                     constraint.OrderId++;
                     constraint.Origin = newEntity;
+                    ecb.AddComponent(entityInQueryIndex, entity, new PhysicsMassOverride{ IsKinematic = 1 }); // TODO
                     ecb.SetComponent(entityInQueryIndex, entity, constraint);
                     
                     ecb.AppendToBuffer<PairSegmentsComponent>(array.Length, bufferEntity, newEntity);
@@ -77,9 +76,9 @@ public class RopeControllerSystem : JobComponentSystem
                     ecb.SetComponent(entityInQueryIndex, entity, constraint);   
                 }
             }).Schedule(moveJob);
-            commandBuffer.AddJobHandleForProducer(lenJob);
         }
-        
+
+        commandBuffer.AddJobHandleForProducer(lenJob);
         return lenJob;
         //return inputDeps;
     }
