@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Physics;
 using Unity.Physics.Systems;
@@ -10,6 +11,7 @@ using UnityEngine;
 using UnityEditor;
 using Unity.Physics.Authoring;
 
+[BurstCompile]
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class ConstraintControllerSystem : SystemBase
 {
@@ -60,5 +62,13 @@ public class ConstraintControllerSystem : SystemBase
 			rotation.Value = quaternion.identity;
 			//vel.Angular += math.mul(MathUtils.InverseInertialWs(world.Value, physicsMass.InverseInertia), math.mul(math.transpose(segment.Cross), lambda));
 		}).Run();
+		
+		//TODO: think about how to clear the array in better way
+		var _array = EntityManager.GetBuffer<PairedSegmentsBuffer>(GetSingletonEntity<StartTag>());
+		for (int i = 0; i < _array.Length; i++)
+		{
+			if(!EntityManager.Exists(_array[i]))
+				_array.RemoveAt(i);
+		}
 	}
 }

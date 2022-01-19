@@ -11,7 +11,7 @@ using Unity.Mathematics;
 public struct ConstraintComponent : IComponentData
 {
     public Entity Origin;
-    public int OrderId;
+    //public int OrderId;
     public float3 Direction;
     public float Mass;
     public float3 TotalLambda;

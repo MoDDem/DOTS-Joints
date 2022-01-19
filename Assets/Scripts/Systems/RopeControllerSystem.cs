@@ -45,7 +45,7 @@ public class RopeControllerSystem : JobComponentSystem
         if(Input.GetKeyDown("space"))
         {
             var bufferEntity = GetSingletonEntity<StartTag>();
-            var getBuffer = GetBufferFromEntity<PairSegmentsComponent>(true);
+            var getBuffer = GetBufferFromEntity<PairedSegmentsBuffer>(true);
             var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
 
             lenJob = Entities.WithAll<ConstraintComponent>()
@@ -58,24 +58,50 @@ public class RopeControllerSystem : JobComponentSystem
                 Entity entity = array[entityInQueryIndex];
                 var constraint = getConstraintComponent[entity];
                 
-                if (constraint.OrderId == 0)
+                if (constraint.Origin == bufferEntity)
                 {
                     var newEntity = ecb.Instantiate(entityInQueryIndex, entity);
 
-                    constraint.OrderId++;
                     constraint.Origin = newEntity;
-                    ecb.AddComponent(entityInQueryIndex, entity, new PhysicsMassOverride{ IsKinematic = 1 }); // TODO
+                    //ecb.SetComponent(entityInQueryIndex, entity, new PhysicsMassOverride{ IsKinematic = 1 }); // TODO
                     ecb.SetComponent(entityInQueryIndex, entity, constraint);
                     
-                    ecb.AppendToBuffer<PairSegmentsComponent>(array.Length, bufferEntity, newEntity);
-                }
-
-                if (constraint.OrderId > 0)
-                {
-                    constraint.OrderId++;
-                    ecb.SetComponent(entityInQueryIndex, entity, constraint);   
+                    ecb.AppendToBuffer<PairedSegmentsBuffer>(array.Length, bufferEntity, newEntity);
                 }
             }).Schedule(moveJob);
+        }
+        if(Input.GetKeyDown("left shift"))
+        {
+            var bufferEntity = GetSingletonEntity<StartTag>();
+            var getBuffer = GetBufferFromEntity<PairedSegmentsBuffer>();
+            var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
+
+            lenJob = Entities.WithAll<ConstraintComponent>()
+                .WithReadOnly(getConstraintComponent)
+                .WithReadOnly(getBuffer)
+                .ForEach((int entityInQueryIndex) =>
+                {
+                    var array = getBuffer[bufferEntity];
+                
+                    if(array.Length <= 1)
+                        return;
+                    
+                    Entity entity = array[entityInQueryIndex];
+                    var constraint = getConstraintComponent[entity];
+
+                    if (constraint.Origin == bufferEntity)
+                    {
+                        ecb.DestroyEntity(entityInQueryIndex, entity);
+                    } else
+                    {
+                        var originConstraint = getConstraintComponent[constraint.Origin];
+                        if (originConstraint.Origin == bufferEntity)
+                        {
+                            constraint.Origin = bufferEntity;
+                            ecb.SetComponent(entityInQueryIndex, entity, constraint);   
+                        }
+                    }
+                }).Schedule(moveJob);
         }
 
         commandBuffer.AddJobHandleForProducer(lenJob);
@@ -83,5 +109,3 @@ public class RopeControllerSystem : JobComponentSystem
         //return inputDeps;
     }
 }
-
-//TODO: https://www.youtube.com/watch?v=nuxTq0AQAyY

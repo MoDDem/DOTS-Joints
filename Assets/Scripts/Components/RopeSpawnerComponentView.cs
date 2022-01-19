@@ -31,7 +31,7 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
     
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
-        dstManager.AddBuffer<PairSegmentsComponent>(entity);
+        dstManager.AddBuffer<PairedSegmentsBuffer>(entity);
         
         dstManager.SetName(entity, "Start rope point");
         dstManager.AddComponent(entity, typeof(StartTag));
@@ -44,7 +44,8 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             typeof(PhysicsMass),
             typeof(PhysicsVelocity),
             typeof(RenderMesh),
-            typeof(RenderBounds)
+            typeof(RenderBounds),
+            typeof(PhysicsMassOverride)
         );
         var segmentEntities = new NativeArray<Entity>(len, Allocator.Persistent);
         dstManager.CreateEntity(segmentType, segmentEntities);
@@ -81,6 +82,7 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             
             var localCollider = dstManager.GetComponentData<PhysicsCollider>(segment);
             dstManager.SetComponentData(segment, PhysicsMass.CreateDynamic(localCollider.MassProperties, mass));
+            //dstManager.SetComponentData(segment, new PhysicsMassOverride {IsKinematic = 1});
 
             float angularFrequency = frequencyHz * (2.0f * math.PI);
             dstManager.SetComponentData(segment, new ConstraintComponent
@@ -91,13 +93,13 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
                 DampingCoefficient = 0,
                 SpringConstant = 0,
                 Direction = incrementDirection,
-                OrderId = i,
+                //OrderId = i,
                 Origin = (i-1 >= 0) ? segmentEntities[i-1] : entity,
                 Mass = mass,
                 Target = position
             });
 
-            dstManager.GetBuffer<PairSegmentsComponent>(entity).Add(segment);
+            dstManager.GetBuffer<PairedSegmentsBuffer>(entity).Add(segment);
         }
         
         /*using (BlobBuilder blobBuilder = new BlobBuilder(Allocator.Temp))
@@ -113,7 +115,7 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             }
             
             var assetReference = blobBuilder.CreateBlobAssetReference<SegmentsMapBlobAsset>(Allocator.Persistent);
-            dstManager.AddComponentData(entity, new PairSegmentsComponent { SegmentsMap = assetReference });
+            dstManager.AddComponentData(entity, new PairedSegmentsBuffer { SegmentsMap = assetReference });
         }*/
         
         Destroy(startPoint);
