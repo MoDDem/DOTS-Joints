@@ -65,10 +65,13 @@ public class ConstraintControllerSystem : SystemBase
 		
 		//TODO: think about how to clear the array in better way
 		var _array = EntityManager.GetBuffer<PairedSegmentsBuffer>(GetSingletonEntity<StartTag>());
-		for (int i = 0; i < _array.Length; i++)
+		Job.WithCode(() =>
 		{
-			if(!EntityManager.Exists(_array[i]))
-				_array.RemoveAt(i);
-		}
+			for (int i = 0; i < _array.Length; i++)
+			{
+				if (!EntityManager.Exists(_array[i]))
+					_array.RemoveAt(i);
+			}
+		}).WithoutBurst().Run();
 	}
 }

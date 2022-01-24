@@ -14,8 +14,8 @@ using Material = UnityEngine.Material;
 
 public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntity
 {
-    public Mesh mesh;
     public Material material;
+    public Mesh mesh;
     
     public GameObject startPoint;
     public int len = 1;
@@ -34,6 +34,7 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
         dstManager.AddBuffer<PairedSegmentsBuffer>(entity);
         
         dstManager.SetName(entity, "Start rope point");
+
         dstManager.AddComponent(entity, typeof(StartTag));
         dstManager.AddComponentData(entity, new Translation { Value = startPoint.transform.position });
 
@@ -62,11 +63,22 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             dstManager.AddComponentData(segment, new Translation {Value = position});
             dstManager.AddComponentData(segment, new Rotation{Value = quaternion.identity});
             dstManager.AddComponentData(segment, new LocalToWorld());
-            
-            dstManager.SetSharedComponentData(segment, new RenderMesh
+
+            var renderer = new RenderMesh
             {
                 mesh = mesh,
-                material = material
+                material = material,
+            };
+            dstManager.SetSharedComponentData(segment, renderer);
+            dstManager.AddComponentData(entity, new SplineMeshDataComponent
+            {
+                RenderMesh = renderer,
+                Material = material,
+                Mesh = mesh,
+                CurveSpace = true,
+                Translation = float3.zero,
+                Rotation = quaternion.identity,
+                Scale = float3.zero
             });
             
             dstManager.SetComponentData(segment, new PhysicsCollider
