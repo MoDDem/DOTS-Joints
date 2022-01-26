@@ -13,28 +13,7 @@ public class MeshUpdateSystem : SystemBase
     protected override void OnUpdate()
     {
         var meshData = GetSingleton<SplineMeshDataComponent>();
-        var spline = new Spline();
-
-        Entities.WithAll<ConstraintComponent>().ForEach((
-            Entity e, 
-            ref ConstraintComponent constraint) =>
-        {
-            var startEntity = GetSingletonEntity<StartTag>();
-            var renderer = EntityManager.GetSharedComponentData<RenderMesh>(startEntity);
-            
-            renderer.mesh.be
-
-            var a = new MeshModJob()
-            {
-                vertices = m_Vertices,
-                normals = m_Normals,
-                sinTime = Mathf.Sin(Time.time),
-                cosTime = Mathf.Cos(Time.time),
-                strength = m_Strength / 5f  // map .05-1 range to smaller real strength
-            };
-
-            a.Schedule(324, 64);
-        }).Run();
+        
     }
     
     struct MeshModJob : IJobParallelFor
