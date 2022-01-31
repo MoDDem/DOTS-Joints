@@ -14,12 +14,13 @@ using Material = UnityEngine.Material;
 
 public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntity
 {
-    public Mesh mesh;
     public Material material;
     
     public GameObject startPoint;
     public int len = 1;
     public float speed;
+    public float radius = 0.1f;
+    public float3 offset = new float3(0, .5f, 0);
     
     //----Constraint settings
     public float3 incrementDirection;
@@ -36,18 +37,21 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
         dstManager.SetName(entity, "Start rope point");
         dstManager.AddComponent(entity, typeof(StartTag));
         dstManager.AddComponentData(entity, new Translation { Value = startPoint.transform.position });
-
+        
         var segmentType = dstManager.CreateArchetype(
             typeof(LocalToWorld),
             typeof(ConstraintComponent),
             typeof(PhysicsCollider),
             typeof(PhysicsMass),
             typeof(PhysicsVelocity),
-            typeof(RenderMesh),
             typeof(RenderBounds),
             typeof(PhysicsMassOverride)
         );
+
+        dstManager.SetArchetype(entity, segmentType);
+
         var segmentEntities = new NativeArray<Entity>(len, Allocator.Persistent);
+
         dstManager.CreateEntity(segmentType, segmentEntities);
         
         for (int i = 0; i < len; i++)
@@ -57,29 +61,21 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             var segment = segmentEntities[i];
             dstManager.SetName(segment,"Rope Segment " + i);
 
-            var position = dstManager.GetComponentData<Translation>(entity).Value + (incrementDirection * (i + 1));
-            
+            var position = ((float3)startPoint.transform.position) + (incrementDirection * radius * (i+1));
+
             dstManager.AddComponentData(segment, new Translation {Value = position});
             dstManager.AddComponentData(segment, new Rotation{Value = quaternion.identity});
             dstManager.AddComponentData(segment, new LocalToWorld());
-            
-            dstManager.SetSharedComponentData(segment, new RenderMesh
-            {
-                mesh = mesh,
-                material = material
-            });
-            
+
             dstManager.SetComponentData(segment, new PhysicsCollider
             {
-                Value = Unity.Physics.BoxCollider.Create(new BoxGeometry
+                Value = Unity.Physics.SphereCollider.Create(new SphereGeometry
                 {
-                    BevelRadius = 0.5f,
-                    Center = float3.zero,
-                    Orientation = quaternion.identity,
-                    Size = new float3(1, 1, 1)
-                }, CollisionFilter.Default, Unity.Physics.Material.Default)
+                    Radius = radius,
+                    Center = float3.zero
+                })
             });
-            
+
             var localCollider = dstManager.GetComponentData<PhysicsCollider>(segment);
             dstManager.SetComponentData(segment, PhysicsMass.CreateDynamic(localCollider.MassProperties, mass));
             //dstManager.SetComponentData(segment, new PhysicsMassOverride {IsKinematic = 1});
@@ -87,37 +83,34 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             float angularFrequency = frequencyHz * (2.0f * math.PI);
             dstManager.SetComponentData(segment, new ConstraintComponent
             {
+                Constraint = segment,
                 FrequencyHz = frequencyHz,
                 DampingRatio = 0.6931472f / (angularFrequency * halfLife),
                 AngularFrequency = angularFrequency,
                 DampingCoefficient = 0,
                 SpringConstant = 0,
                 Direction = incrementDirection,
-                //OrderId = i,
                 Origin = (i-1 >= 0) ? segmentEntities[i-1] : entity,
                 Mass = mass,
-                Target = position
+                Target = position,
+                Radius = radius,
+                Offset = offset
             });
 
             dstManager.GetBuffer<PairedSegmentsBuffer>(entity).Add(segment);
         }
-        
-        /*using (BlobBuilder blobBuilder = new BlobBuilder(Allocator.Temp))
+
+        Mesh mesh = new Mesh();
+        mesh.MarkDynamic();
+        mesh.name = "extendedMesh";
+
+        dstManager.AddSharedComponentData(entity, new RenderMesh
         {
-            ref SegmentsMapBlobAsset mapAsset = ref blobBuilder.ConstructRoot<SegmentsMapBlobAsset>();
-            mapAsset.Height = len;
-            mapAsset.Speed = speed;
-            
-            BlobBuilderArray<Entity> segmentArray = blobBuilder.Allocate(ref mapAsset.Map, len);
-            for (int t = 0; t < len; t++)
-            {
-                segmentArray[t] = segmentEntities[t];
-            }
-            
-            var assetReference = blobBuilder.CreateBlobAssetReference<SegmentsMapBlobAsset>(Allocator.Persistent);
-            dstManager.AddComponentData(entity, new PairedSegmentsBuffer { SegmentsMap = assetReference });
-        }*/
-        
+            mesh = mesh,
+            material = material
+        });
+        dstManager.AddComponent(entity, typeof(RenderBounds));
+
         Destroy(startPoint);
         segmentEntities.Dispose();
     }

@@ -61,10 +61,13 @@ public class RopeControllerSystem : JobComponentSystem
                 if (constraint.Origin == bufferEntity)
                 {
                     var newEntity = ecb.Instantiate(entityInQueryIndex, entity);
+                    constraint.Constraint = newEntity;
+                    ecb.SetComponent(entityInQueryIndex, newEntity, constraint);
 
+                    constraint.Constraint = entity;
                     constraint.Origin = newEntity;
-                    //ecb.SetComponent(entityInQueryIndex, entity, new PhysicsMassOverride{ IsKinematic = 1 }); // TODO
                     ecb.SetComponent(entityInQueryIndex, entity, constraint);
+                    //ecb.SetComponent(entityInQueryIndex, entity, new PhysicsMassOverride{ IsKinematic = 1 }); // TODO
                     
                     ecb.AppendToBuffer<PairedSegmentsBuffer>(array.Length, bufferEntity, newEntity);
                 }
@@ -88,7 +91,7 @@ public class RopeControllerSystem : JobComponentSystem
                     
                     Entity entity = array[entityInQueryIndex];
                     var constraint = getConstraintComponent[entity];
-
+                    
                     if (constraint.Origin == bufferEntity)
                     {
                         ecb.DestroyEntity(entityInQueryIndex, entity);
@@ -106,6 +109,5 @@ public class RopeControllerSystem : JobComponentSystem
 
         commandBuffer.AddJobHandleForProducer(lenJob);
         return lenJob;
-        //return inputDeps;
     }
 }

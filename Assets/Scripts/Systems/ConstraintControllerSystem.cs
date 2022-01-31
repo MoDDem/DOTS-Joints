@@ -7,9 +7,9 @@ using Unity.Physics;
 using Unity.Physics.Systems;
 using Unity.Transforms;
 using Unity.Mathematics;
-using UnityEngine;
 using UnityEditor;
 using Unity.Physics.Authoring;
+using Unity.Rendering;
 
 [BurstCompile]
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
@@ -27,9 +27,9 @@ public class ConstraintControllerSystem : SystemBase
 		{
 			if(segment.Origin == Entity.Null)
 				return;
-			
+
 			var position = GetComponent<Translation>(entity);
-			segment.Target = GetComponent<Translation>(segment.Origin).Value + new float3(0, -0.82f, 0); //TODO: program calc offset from entity origin
+			segment.Target = GetComponent<Translation>(segment.Origin).Value + (segment.Radius + segment.Offset) * segment.Direction;
 			
 			segment.DampingCoefficient = 2.0f * segment.Mass * segment.DampingRatio * segment.AngularFrequency;
 			segment.SpringConstant = segment.Mass * segment.AngularFrequency * segment.AngularFrequency;
@@ -53,10 +53,7 @@ public class ConstraintControllerSystem : SystemBase
 			float3 jvb = cVel + segment.PositionErrorBias + segment.Sbc * segment.TotalLambda;
 			float3 lambda = math.mul(segment.EffectiveMass, -jvb);
 			segment.TotalLambda += lambda;
-			/*
-			foreach (var item in typeof(RopeSegmentComponent).GetProperties())
-				Debug.Log(item.Name + " - " + item.GetValue(segment).ToString());
-			*/
+
 			vel.Linear += physicsMass.InverseMass * lambda;
 			vel.Angular = float3.zero;
 			rotation.Value = quaternion.identity;

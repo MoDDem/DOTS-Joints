@@ -1352,11 +1352,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f423fece6e336b34092ad723c719609d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  material: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  material: {fileID: 2100000, guid: 88342ccc0e359a04cbf178a1687a9a4e, type: 2}
   startPoint: {fileID: 836449883}
   len: 10
   speed: 5
+  radius: 0.3
+  offset:
+    x: 0
+    y: 0.18
+    z: 0
   incrementDirection:
     x: 0
     y: -1
