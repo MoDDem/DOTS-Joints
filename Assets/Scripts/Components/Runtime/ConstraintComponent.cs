@@ -10,8 +10,12 @@ using Unity.Mathematics;
 [Serializable]
 public struct ConstraintComponent : IComponentData
 {
-    public bool IsUpdated;
-    public int OrderId;
+    public Entity Constraint;
+    public Entity Origin;
+
+    public float3 Offset;
+    public float Radius;
+    //public int OrderId;
     public float3 Direction;
     public float Mass;
     public float3 TotalLambda;

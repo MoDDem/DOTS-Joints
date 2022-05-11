@@ -15,6 +15,6 @@ public class OnGameObjectConverted : MonoBehaviour, IConvertGameObjectToEntity
 
 	public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
 	{
-		ExecuteEvents.Execute<IConvertedEntityTarget>(FindObjectOfType<RopeSpawner>().gameObject, null, (x, y) => x.Converted(entity, gameObject));
+		ExecuteEvents.Execute<IConvertedEntityTarget>(FindObjectOfType<RopeSpawnerComponentView>().gameObject, null, (x, y) => x.Converted(entity, gameObject));
 	}
 }
