@@ -35,7 +35,6 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
         dstManager.AddBuffer<PairedSegmentsBuffer>(entity);
         
         dstManager.SetName(entity, "Start rope point");
-        dstManager.AddComponent(entity, typeof(StartTag));
         dstManager.AddComponentData(entity, new Translation { Value = startPoint.transform.position });
         
         var segmentType = dstManager.CreateArchetype(
@@ -47,8 +46,6 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             typeof(RenderBounds),
             typeof(PhysicsMassOverride)
         );
-
-        dstManager.SetArchetype(entity, segmentType);
 
         var segmentEntities = new NativeArray<Entity>(len, Allocator.Persistent);
 
@@ -97,7 +94,7 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
                 Offset = offset
             });
 
-            dstManager.GetBuffer<PairedSegmentsBuffer>(entity).Add(segment);
+            dstManager.GetBuffer<PairedSegmentsBuffer>(entity).Add(new PairedSegmentsBuffer { Value = segment });
         }
 
         Mesh mesh = new Mesh();
@@ -110,6 +107,8 @@ public class RopeSpawnerComponentView : MonoBehaviour, IConvertGameObjectToEntit
             material = material
         });
         dstManager.AddComponent(entity, typeof(RenderBounds));
+
+        dstManager.AddComponentData(entity, new StartTag { UpdateArray = false, UpdateMesh = true, SegmentsCount = (uint) segmentEntities.Length });
 
         Destroy(startPoint);
         segmentEntities.Dispose();

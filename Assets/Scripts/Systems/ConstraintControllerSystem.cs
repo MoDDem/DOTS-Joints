@@ -1,15 +1,10 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Physics;
 using Unity.Physics.Systems;
 using Unity.Transforms;
 using Unity.Mathematics;
-using UnityEditor;
-using Unity.Physics.Authoring;
-using Unity.Rendering;
+using UnityEngine;
 
 [BurstCompile]
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
@@ -59,13 +54,37 @@ public class ConstraintControllerSystem : SystemBase
 			rotation.Value = quaternion.identity;
 			//vel.Angular += math.mul(MathUtils.InverseInertialWs(world.Value, physicsMass.InverseInertia), math.mul(math.transpose(segment.Cross), lambda));
 		}).Run();
-		
+
 		//TODO: think about how to clear the array in better way
-		var _array = EntityManager.GetBuffer<PairedSegmentsBuffer>(GetSingletonEntity<StartTag>());
-		for (int i = 0; i < _array.Length; i++)
+		var start = GetSingletonEntity<StartTag>();
+		var startTag = EntityManager.GetComponentData<StartTag>(start);
+		var _array = EntityManager.GetBuffer<PairedSegmentsBuffer>(start);
+
+		if (startTag.UpdateArray || startTag.SegmentsCount != _array.Length)
 		{
-			if(!EntityManager.Exists(_array[i]))
-				_array.RemoveAt(i);
+			var pos = EntityManager.GetComponentData<Translation>(start);
+
+			for (int i = 0; i < _array.Length; i++)
+			{
+				if (!EntityManager.Exists(_array[i]))
+					_array.RemoveAt(i);
+			}
+
+			var len = _array.Length;
+			for (var i = 1; i < len; i++)
+			{
+				for (var j = 0; j < len - i; j++)
+				{
+					var point1 = EntityManager.GetComponentData<Translation>(_array[j]).Value;
+					var point2 = EntityManager.GetComponentData<Translation>(_array[j + 1]).Value;
+					if (math.distance(pos.Value, point1) > math.distance(pos.Value, point2))
+					{
+						(_array[j], _array[j + 1]) = (_array[j + 1], _array[j]);
+					}
+				}
+			}
+
+			EntityManager.SetComponentData(start, new StartTag { UpdateArray = false, UpdateMesh = true });
 		}
 	}
 }

@@ -41,19 +41,20 @@ public class RopeControllerSystem : JobComponentSystem
             }).Schedule(inputDeps);
         }
 
+        var bufferEntity = GetSingletonEntity<StartTag>();
+        var getBuffer = GetBufferFromEntity<PairedSegmentsBuffer>(false);
+        var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
+
         var lenJob = moveJob;
+
         if(Input.GetKeyDown("space"))
         {
-            var bufferEntity = GetSingletonEntity<StartTag>();
-            var getBuffer = GetBufferFromEntity<PairedSegmentsBuffer>(true);
-            var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
-
             lenJob = Entities.WithAll<ConstraintComponent>()
                 .WithReadOnly(getConstraintComponent)
-                .WithReadOnly(getBuffer)
+                .WithNativeDisableContainerSafetyRestriction(getBuffer)
                 .ForEach((int entityInQueryIndex) =>
             {
-                var array = getBuffer[bufferEntity];
+                var array = getBuffer[bufferEntity].AsNativeArray();
                 
                 Entity entity = array[entityInQueryIndex];
                 var constraint = getConstraintComponent[entity];
@@ -68,17 +69,15 @@ public class RopeControllerSystem : JobComponentSystem
                     constraint.Origin = newEntity;
                     ecb.SetComponent(entityInQueryIndex, entity, constraint);
                     //ecb.SetComponent(entityInQueryIndex, entity, new PhysicsMassOverride{ IsKinematic = 1 }); // TODO
-                    
-                    ecb.AppendToBuffer<PairedSegmentsBuffer>(array.Length, bufferEntity, newEntity);
+                    ecb.AppendToBuffer(array.Length, bufferEntity, new PairedSegmentsBuffer { Value = newEntity });
                 }
             }).Schedule(moveJob);
+            commandBuffer.AddJobHandleForProducer(lenJob);
+
+            EntityManager.SetComponentData(bufferEntity, new StartTag { UpdateArray = true, UpdateMesh = false, SegmentsCount = (uint) getBuffer[bufferEntity].Length + 1 });
         }
         if(Input.GetKeyDown("left shift"))
         {
-            var bufferEntity = GetSingletonEntity<StartTag>();
-            var getBuffer = GetBufferFromEntity<PairedSegmentsBuffer>();
-            var getConstraintComponent = GetComponentDataFromEntity<ConstraintComponent>(true);
-
             lenJob = Entities.WithAll<ConstraintComponent>()
                 .WithReadOnly(getConstraintComponent)
                 .WithReadOnly(getBuffer)
@@ -105,9 +104,11 @@ public class RopeControllerSystem : JobComponentSystem
                         }
                     }
                 }).Schedule(moveJob);
+            commandBuffer.AddJobHandleForProducer(lenJob);
+
+            EntityManager.SetComponentData(bufferEntity, new StartTag { UpdateArray = true, UpdateMesh = false, SegmentsCount = (uint)getBuffer[bufferEntity].Length - 1 });
         }
 
-        commandBuffer.AddJobHandleForProducer(lenJob);
         return lenJob;
     }
 }

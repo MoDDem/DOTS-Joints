@@ -5,10 +5,10 @@ using UnityEngine;
 
 public class MeshBuilder3
 {
-    private float3[] _Positions;
+    public float3[] _Positions;
 
-    [SerializeField] private int _Sides = 8;
-    [SerializeField] private float _Radius = 0.1f;
+    private int _Sides = 8;
+    private float _Radius = 0.1f;
     private Vector3[] _Vertices;
     private Mesh _Mesh;
 

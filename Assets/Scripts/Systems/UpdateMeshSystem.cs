@@ -12,22 +12,6 @@ using UnityEngine;
 
 public class UpdateMeshSystem : JobComponentSystem
 {
-	/*
-    MeshBuilder3 meshBuilder;
-    protected override void OnUpdate()
-    {
-        
-        var ent = GetSingletonEntity<StartTag>();
-        var renderer = EntityManager.GetSharedComponentData<RenderMesh>(ent);
-
-        var h = GetBuffer<PairedSegmentsBuffer>(GetSingletonEntity<StartTag>()).ToNativeArray(Allocator.Temp);
-        var positions = h.Select(x => GetComponentDataFromEntity<ConstraintComponent>()[x]).Select(x => x.Target);
-        
-        meshBuilder = new MeshBuilder3(positions.ToArray(), renderer.mesh);
-        meshBuilder.RenderCable();
-    }
-    */
-
 	struct ComputeUVs : IJobFor
 	{
         Vector2[] UVs;
@@ -124,44 +108,35 @@ public class UpdateMeshSystem : JobComponentSystem
         }
     }
 
-	struct SortSegments : IJobFor
-	{
-        public ComponentTypeHandle<ConstraintComponent> componentType;
-        public ArchetypeChunk archetype;
-
-        NativeArray<ConstraintComponent> segments;
-
-        public bool isComplete;
-
-		public void Execute(int index)
-		{
-            var points = segments == null ? archetype.GetNativeArray(componentType) : segments;
-
-            if (points.Length < index + 1)
-			{
-                int len = points.Length;
-                
-                for (var j = 0; j < len - index; j++)
-                    if (math.all(points[j].Target > points[j + 1].Target))
-                        (points[j], points[j+1]) = (points[j+1], points[j]);
-            }
-		}
-	}
-
     RenderMesh renderer;
+    MeshBuilder3 builder;
 
 	protected override JobHandle OnUpdate(JobHandle inputDeps)
 	{
         if (renderer.mesh == null)
             renderer = EntityManager.GetSharedComponentData<RenderMesh>(GetSingletonEntity<StartTag>());
+        var start = GetSingletonEntity<StartTag>();
+        var buff = EntityManager.GetBuffer<PairedSegmentsBuffer>(start);
+        var startTag = EntityManager.GetComponentData<StartTag>(start);
+        if (startTag.UpdateMesh)
+		{
+            float3[] pos = new float3[buff.Length];
+			for (int i = 0; i < buff.Length; i++)
+			    pos[i] = EntityManager.GetComponentData<Translation>(buff[i].Value).Value - EntityManager.GetComponentData<Translation>(start).Value;
+            builder = builder ?? new MeshBuilder3(pos, renderer.mesh);
+            builder._Positions = pos;
+            builder.RenderCable();
+		}
 
-        var arch = EntityManager.GetChunk(GetSingletonEntity<StartTag>());
+        /*
+        var arch = EntityManager.GetChunk(buff[0]);
         var a = new SortSegments {
-            componentType = EntityManager.GetComponentTypeHandle<ConstraintComponent>(true),
-            archetype = arch
+            segments = buff.ToNativeArray(Allocator.TempJob),
+            em = EntityManager,
+            isComplete = false
         };
         var sortedPoints = a.ScheduleParallel(arch.ChunkEntityCount - 1, 32, inputDeps);
-        Debug.Log(sortedPoints.IsCompleted);
+        Debug.Log(sortedPoints.IsCompleted);*/
         
         /*
         float3[] _Positions;
@@ -213,6 +188,6 @@ public class UpdateMeshSystem : JobComponentSystem
         _Mesh.RecalculateNormals();
         _Mesh.RecalculateBounds();
         */
-        return sortedPoints;
+        return default;
     }
 }
